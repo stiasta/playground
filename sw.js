@@ -2,7 +2,7 @@
    Service Worker — Spillsamling
    Bump CACHE version whenever static assets change.
    =================================================== */
-const CACHE = 'games-v1';
+const CACHE = 'games-v2';
 
 const ASSETS = [
   './',
@@ -10,6 +10,7 @@ const ASSETS = [
   './shared.css',
   './manifest.json',
   './stats.html',
+  './install.html',
   './icons/icon.svg',
   './games/tallpyramide.html'
 ];

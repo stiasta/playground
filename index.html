@@ -41,10 +41,13 @@
   <main class="hub-container">
     <p class="welcome-text" data-i18n="hubWelcome">Velg et spill å spille!</p>
     <div class="games-grid" id="gamesGrid"></div>
-    <div style="margin-top:24px; width:100%;">
+    <div style="margin-top:24px; width:100%; display:flex; flex-direction:column; gap:12px;">
       <a id="statsLinkA" href="stats.html" class="btn btn-outline"
          data-i18n="statsLink"
          style="display:flex; text-decoration:none; justify-content:center;">📊 Statistikk</a>
+      <a id="installLinkA" href="install.html" class="btn btn-outline"
+         data-i18n="installLink"
+         style="display:flex; text-decoration:none; justify-content:center;">📲 Legg til på hjemskjerm</a>
     </div>
   </main>
 
@@ -55,11 +58,13 @@
         hubTitle: 'Spillsamling',
         hubWelcome: 'Velg et spill å spille!',
         statsLink: '📊 Statistikk',
+        installLink: '📲 Legg til på hjemskjerm',
       },
       en: {
         hubTitle: 'Game Collection',
         hubWelcome: 'Choose a game to play!',
         statsLink: '📊 Statistics',
+        installLink: '📲 Add to Home Screen',
       }
     };
 
@@ -90,6 +95,8 @@
       });
       const statsEl = document.getElementById('statsLinkA');
       if (statsEl) statsEl.href = 'stats.html?lang=' + lang;
+      const installEl = document.getElementById('installLinkA');
+      if (installEl) installEl.href = 'install.html?lang=' + lang;
       renderGames();
     }
 
