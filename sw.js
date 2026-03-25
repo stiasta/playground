@@ -2,13 +2,14 @@
    Service Worker — Spillsamling
    Bump CACHE version whenever static assets change.
    =================================================== */
-const CACHE = 'games-v3';
+const CACHE = 'games-v4';
 
 const ASSETS = [
   './',
   './index.html',
   './shared.css',
   './manifest.json',
+  './favicon.svg',
   './stats.html',
   './install.html',
   './icons/icon.svg',
