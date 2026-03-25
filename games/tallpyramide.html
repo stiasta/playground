@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4a6fa5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="../manifest.json">
+  <title>Tallpyramide</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    /* ===== Difficulty picker ===== */
+    .diff-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      margin-top: 32px;
+    }
+
+    .diff-buttons .btn {
+      font-size: 1.4rem;
+      padding: 22px;
+    }
+
+    /* ===== Pyramid ===== */
+    .pyramid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin: 20px 0;
+      width: 100%;
+    }
+
+    .pyramid-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+
+    .cell {
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 10px;
+      border: 2.5px solid var(--color-cell-border);
+      background: var(--color-cell-bg);
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      cursor: default;
+      flex-shrink: 0;
+    }
+
+    .cell.given {
+      background: #f0f0f0;
+      color: var(--color-text);
+    }
+
+    .cell.hidden {
+      background: var(--color-cell-hidden);
+      border-color: var(--color-primary);
+      cursor: pointer;
+      color: var(--color-primary);
+    }
+
+    .cell.hidden:hover {
+      background: #d5e3f7;
+    }
+
+    .cell.selected {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.35);
+      transform: scale(1.08);
+    }
+
+    .cell.correct {
+      background: #c8e6c9;
+      border-color: var(--color-correct);
+    }
+
+    .cell.wrong {
+      background: #ffcdd2;
+      border-color: var(--color-wrong);
+      animation: shake 0.4s;
+    }
+
+    .cell.hint-reveal {
+      background: #fff9c4;
+      border-color: #f9a825;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    .cell.pop {
+      animation: pop 0.3s;
+    }
+
+    /* ===== Numpad ===== */
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 280px;
+      margin-top: 12px;
+    }
+
+    .numpad-btn {
+      height: 60px;
+      border: 2px solid #ddd;
+      border-radius: 12px;
+      background: var(--color-card);
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-family: var(--font-main);
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .numpad-btn:active {
+      transform: scale(0.93);
+      background: #e0e0e0;
+    }
+
+    .numpad-btn.delete {
+      font-size: 1.3rem;
+    }
+
+    .numpad-btn.confirm {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+
+    .numpad-btn.confirm:active {
+      background: var(--color-primary-hover);
+    }
+
+    /* ===== Action bar ===== */
+    .action-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 16px;
+      width: 100%;
+    }
+
+    .action-bar .btn {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .hint-counter {
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+      margin-top: 4px;
+    }
+
+    /* ===== Win screen ===== */
+    .win-emoji {
+      font-size: 5rem;
+      margin: 20px 0;
+      animation: pop 0.6s;
+    }
+
+    .win-stats {
+      font-size: 1.2rem;
+      color: var(--color-text-light);
+      text-align: center;
+      line-height: 2;
+    }
+
+    .win-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-top: 28px;
+    }
+
+    /* ===== Back link ===== */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* ===== Responsive cell sizing ===== */
+    @media (max-width: 420px) {
+      .cell {
+        width: 42px;
+        height: 42px;
+        font-size: 1rem;
+        border-radius: 8px;
+      }
+      .pyramid { gap: 4px; }
+      .pyramid-row { gap: 4px; }
+    }
+
+    @media (max-width: 350px) {
+      .cell {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+      }
+    }
+
+    /* ===== Confetti ===== */
+    .confetti-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -20px;
+      animation: confetti-fall linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% { top: -20px; opacity: 1; transform: rotate(0deg); }
+      100% { top: 110vh; opacity: 0; transform: rotate(720deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <a href="../index.html" class="back-link" id="backLink">← <span data-i18n="back">Tilbake</span></a>
+    <h1 data-i18n="gameTitle">Tallpyramide</h1>
+    <button class="lang-toggle" id="langToggle" aria-label="Change language">🇳🇴</button>
+  </header>
+
+  <!-- SCREEN: Difficulty picker -->
+  <section class="screen active" id="screenDifficulty">
+    <p style="font-size:4rem; margin-top:16px;">🔺</p>
+    <p style="font-size:1.1rem; color:var(--color-text-light); text-align:center; margin-top:12px;" data-i18n="chooseLevel">Velg vanskelighetsgrad:</p>
+    <div class="diff-buttons">
+      <button class="btn btn-easy" onclick="startGame('easy')">
+        <span data-i18n="easy">Lett</span> <span style="opacity:0.7">(4 rader)</span>
+      </button>
+      <button class="btn btn-medium" onclick="startGame('medium')">
+        <span data-i18n="medium">Medium</span> <span style="opacity:0.7">(6 rader)</span>
+      </button>
+      <button class="btn btn-hard" onclick="startGame('hard')">
+        <span data-i18n="hard">Vanskelig</span> <span style="opacity:0.7">(8 rader)</span>
+      </button>
+      <button class="btn btn-extreme" onclick="startGame('extreme')">
+        <span data-i18n="extreme">🔥 Ekstrem</span> <span style="opacity:0.7">(10 rader)</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- SCREEN: Game board -->
+  <section class="screen" id="screenGame">
+    <div class="pyramid" id="pyramid"></div>
+    <div class="numpad" id="numpad"></div>
+    <div class="action-bar">
+      <button class="btn btn-outline" id="btnHint" onclick="useHint()">
+        💡 <span data-i18n="hint">Hint</span>
+      </button>
+      <button class="btn btn-primary" id="btnCheck" onclick="checkAnswers()">
+        ✔ <span data-i18n="check">Sjekk</span>
+      </button>
+    </div>
+    <p class="hint-counter" id="hintCounter"></p>
+  </section>
+
+  <!-- SCREEN: Win -->
+  <section class="screen" id="screenWin">
+    <div class="win-emoji">🎉</div>
+    <h2 data-i18n="winTitle" style="font-size:1.8rem;">Gratulerer!</h2>
+    <div class="win-stats" id="winStats"></div>
+    <div class="win-buttons">
+      <button class="btn btn-primary" onclick="playAgain()">
+        🔄 <span data-i18n="playAgain">Spill igjen</span>
+      </button>
+      <button class="btn btn-outline" onclick="goToMenu()">
+        🏠 <span data-i18n="menu">Meny</span>
+      </button>
+    </div>
+  </section>
+
+  <script>
+    // ===== i18n =====
+    const i18n = {
+      no: {
+        gameTitle: 'Tallpyramide',
+        back: 'Tilbake',
+        chooseLevel: 'Velg vanskelighetsgrad:',
+        easy: 'Lett',
+        medium: 'Medium',
+        hard: 'Vanskelig',
+        hint: 'Hint',
+        check: 'Sjekk',
+        winTitle: 'Gratulerer!',
+        playAgain: 'Spill igjen',
+        menu: 'Meny',
+        hintText: (used, max) => `Hint brukt: ${used} / ${max}`,
+        timeText: (m, s) => `Tid: ${m}m ${s}s`,
+        hintsUsedText: (n) => `Hint brukt: ${n}`,
+        rows: 'rader',
+        extreme: '🔥 Ekstrem',
+      },
+      en: {
+        gameTitle: 'Number Pyramid',
+        back: 'Back',
+        chooseLevel: 'Choose difficulty:',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        hint: 'Hint',
+        check: 'Check',
+        winTitle: 'Congratulations!',
+        playAgain: 'Play again',
+        menu: 'Menu',
+        hintText: (used, max) => `Hints used: ${used} / ${max}`,
+        timeText: (m, s) => `Time: ${m}m ${s}s`,
+        hintsUsedText: (n) => `Hints used: ${n}`,
+        rows: 'rows',
+        extreme: '🔥 Extreme',
+      }
+    };
+
+    let lang = 'no';
+
+    // Read language from URL or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'no') {
+      lang = urlParams.get('lang');
+    } else if (localStorage.getItem('gameLang')) {
+      lang = localStorage.getItem('gameLang');
+    }
+
+    function T(key) { return i18n[lang][key]; }
+
+    function setLang(l) {
+      lang = l;
+      localStorage.setItem('gameLang', lang);
+      document.getElementById('langToggle').textContent = lang === 'no' ? '🇳🇴' : '🇬🇧';
+      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+      document.getElementById('backLink').href = '../index.html?lang=' + lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (typeof i18n[lang][key] === 'string') el.textContent = i18n[lang][key];
+      });
+      updateHintCounter();
+      // Update row count labels
+      const rowLabels = document.querySelectorAll('.diff-buttons .btn span:last-child');
+      const rowCounts = [4, 6, 8, 10];
+      rowLabels.forEach((span, i) => {
+        span.textContent = `(${rowCounts[i]} ${T('rows')})`;
+      });
+    }
+
+    document.getElementById('langToggle').addEventListener('click', () => {
+      setLang(lang === 'no' ? 'en' : 'no');
+    });
+
+    // ===== Difficulty configs =====
+    const CONFIGS = {
+      easy:   { rows: 4,  baseMin: 1, baseMax: 9, maxTop: 200,  hideFraction: 0.45, maxHints: 3 },
+      medium: { rows: 6,  baseMin: 1, baseMax: 5, maxTop: 500,  hideFraction: 0.48, maxHints: 3 },
+      hard:   { rows: 8,  baseMin: 1, baseMax: 3, maxTop: 800,  hideFraction: 0.50, maxHints: 3 },
+      extreme:{ rows: 10, baseMin: 1, baseMax: 5, maxTop: 3000, hideFraction: 0.52, maxHints: 3 },
+    };
+
+    // ===== Game state =====
+    let grid = [];          // grid[row][col] = correct number
+    let hiddenSet = [];     // [{row, col}, ...]
+    let playerValues = {};  // "row,col" => number string
+    let selectedCell = null;
+    let currentDifficulty = null;
+    let hintsUsed = 0;
+    let startTime = 0;
+    let currentInputStr = '';
+
+    // ===== Screen management =====
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ===== Puzzle generation =====
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generatePuzzle(config) {
+      const { rows, baseMin, baseMax, maxTop } = config;
+      for (let attempt = 0; attempt < 200; attempt++) {
+        const g = [];
+        // Bottom row
+        const bottom = [];
+        for (let c = 0; c < rows; c++) {
+          bottom.push(randInt(baseMin, baseMax));
+        }
+        g[rows - 1] = bottom;
+
+        // Build up
+        for (let r = rows - 2; r >= 0; r--) {
+          g[r] = [];
+          for (let c = 0; c <= r; c++) {
+            g[r][c] = g[r + 1][c] + g[r + 1][c + 1];
+          }
+        }
+
+        if (g[0][0] <= maxTop) {
+          return g;
+        }
+      }
+      // Fallback: just use the last generated grid
+      const g = [];
+      const bottom = [];
+      for (let c = 0; c < config.rows; c++) bottom.push(baseMin);
+      g[config.rows - 1] = bottom;
+      for (let r = config.rows - 2; r >= 0; r--) {
+        g[r] = [];
+        for (let c = 0; c <= r; c++) g[r][c] = g[r + 1][c] + g[r + 1][c + 1];
+      }
+      return g;
+    }
+
+    function chooseCellsToHide(gridData, config) {
+      const { rows, hideFraction } = config;
+      const allCells = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < gridData[r].length; c++) {
+          allCells.push({ row: r, col: c });
+        }
+      }
+      const totalCells = allCells.length;
+      const hideCount = Math.round(totalCells * hideFraction);
+
+      // Shuffle and pick
+      for (let i = allCells.length - 1; i > 0; i--) {
+        const j = randInt(0, i);
+        [allCells[i], allCells[j]] = [allCells[j], allCells[i]];
+      }
+
+      return allCells.slice(0, hideCount);
+    }
+
+    // ===== Cell sizing =====
+    function calcCellSize(colCount) {
+      const vw = Math.min(window.innerWidth, 600);
+      const available = vw - 32;
+      const gaps = (colCount - 1) * 6;
+      return Math.max(28, Math.min(54, Math.floor((available - gaps) / colCount)));
+    }
+
+    function getAdaptiveFontSize(cellSize, digitCount) {
+      const base = Math.max(8, Math.round(cellSize * 0.38));
+      if (digitCount <= 2) return base;
+      if (digitCount === 3) return Math.max(8, Math.round(base * 0.78));
+      return Math.max(8, Math.round(base * 0.62));
+    }
+
+    // ===== Statistics =====
+    const STATS_KEY = 'tallpyramideStats';
+
+    function loadStats() {
+      try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; }
+      catch { return {}; }
+    }
+
+    function defaultDiffStats() {
+      return { played: 0, completed: 0, bestTime: null, totalTime: 0, totalHints: 0, lastPlayed: null };
+    }
+
+    function recordGameStart(difficulty) {
+      const s = loadStats();
+      if (!s[difficulty]) s[difficulty] = defaultDiffStats();
+      s[difficulty].played++;
+      localStorage.setItem(STATS_KEY, JSON.stringify(s));
+    }
+
+    function saveCompletedStats(difficulty, elapsed, hints) {
+      const s = loadStats();
+      if (!s[difficulty]) s[difficulty] = defaultDiffStats();
+      const d = s[difficulty];
+      d.completed++;
+      d.totalTime += elapsed;
+      d.totalHints += hints;
+      d.lastPlayed = new Date().toISOString();
+      if (d.bestTime === null || elapsed < d.bestTime) d.bestTime = elapsed;
+      localStorage.setItem(STATS_KEY, JSON.stringify(s));
+    }
+
+    // ===== Start game =====
+    function startGame(difficulty) {
+      currentDifficulty = difficulty;
+      const config = CONFIGS[difficulty];
+      grid = generatePuzzle(config);
+      hiddenSet = chooseCellsToHide(grid, config);
+      playerValues = {};
+      selectedCell = null;
+      currentInputStr = '';
+      hintsUsed = 0;
+      startTime = Date.now();
+      recordGameStart(difficulty);
+
+      renderPyramid();
+      renderNumpad();
+      updateHintCounter();
+      showScreen('screenGame');
+    }
+
+    // ===== Render pyramid =====
+    function renderPyramid() {
+      const pyramid = document.getElementById('pyramid');
+      pyramid.innerHTML = '';
+      const rows = grid.length;
+      const cellSize = calcCellSize(rows);
+
+      for (let r = 0; r < rows; r++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'pyramid-row';
+
+        for (let c = 0; c < grid[r].length; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          const key = `${r},${c}`;
+          const isHidden = hiddenSet.some(h => h.row === r && h.col === c);
+          const answerDigits = String(grid[r][c]).length;
+
+          cell.style.width = cellSize + 'px';
+          cell.style.height = cellSize + 'px';
+          cell.style.fontSize = getAdaptiveFontSize(cellSize, answerDigits) + 'px';
+
+          if (isHidden) {
+            cell.classList.add('hidden');
+            cell.textContent = playerValues[key] || '';
+            cell.addEventListener('click', () => selectCell(r, c));
+          } else {
+            cell.classList.add('given');
+            cell.textContent = grid[r][c];
+          }
+
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          rowDiv.appendChild(cell);
+        }
+
+        pyramid.appendChild(rowDiv);
+      }
+    }
+
+    // ===== Select cell =====
+    function selectCell(row, col) {
+      selectedCell = { row, col };
+      const key = `${row},${col}`;
+      currentInputStr = playerValues[key] || '';
+
+      // Remove previous selection styling
+      document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+      // Remove check styling from selected cell
+      const cellEl = getCellElement(row, col);
+      if (cellEl) {
+        cellEl.classList.remove('correct', 'wrong');
+        cellEl.classList.add('selected');
+      }
+    }
+
+    function getCellElement(row, col) {
+      return document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+    }
+
+    // ===== Numpad =====
+    function renderNumpad() {
+      const numpad = document.getElementById('numpad');
+      numpad.innerHTML = '';
+
+      for (let n = 1; n <= 9; n++) {
+        const btn = document.createElement('button');
+        btn.className = 'numpad-btn';
+        btn.textContent = n;
+        btn.addEventListener('click', () => numpadInput(String(n)));
+        numpad.appendChild(btn);
+      }
+
+      // Delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'numpad-btn delete';
+      delBtn.textContent = '⌫';
+      delBtn.addEventListener('click', () => numpadDelete());
+      numpad.appendChild(delBtn);
+
+      // Zero
+      const zeroBtn = document.createElement('button');
+      zeroBtn.className = 'numpad-btn';
+      zeroBtn.textContent = '0';
+      zeroBtn.addEventListener('click', () => numpadInput('0'));
+      numpad.appendChild(zeroBtn);
+
+      // Confirm — moves to next empty cell
+      const confirmBtn = document.createElement('button');
+      confirmBtn.className = 'numpad-btn confirm';
+      confirmBtn.textContent = '→';
+      confirmBtn.addEventListener('click', () => numpadConfirm());
+      numpad.appendChild(confirmBtn);
+    }
+
+    function numpadInput(digit) {
+      if (!selectedCell) return;
+      // Don't allow typing in hint-revealed cells
+      if (!hiddenSet.some(h => h.row === selectedCell.row && h.col === selectedCell.col)) return;
+      currentInputStr += digit;
+      // Cap length to prevent absurd entries
+      if (currentInputStr.length > 5) return;
+      const key = `${selectedCell.row},${selectedCell.col}`;
+      playerValues[key] = currentInputStr;
+      const cellEl = getCellElement(selectedCell.row, selectedCell.col);
+      if (cellEl) {
+        cellEl.textContent = currentInputStr;
+        cellEl.classList.add('pop');
+        setTimeout(() => cellEl.classList.remove('pop'), 300);
+      }
+    }
+
+    function numpadDelete() {
+      if (!selectedCell) return;
+      currentInputStr = currentInputStr.slice(0, -1);
+      const key = `${selectedCell.row},${selectedCell.col}`;
+      playerValues[key] = currentInputStr;
+      const cellEl = getCellElement(selectedCell.row, selectedCell.col);
+      if (cellEl) cellEl.textContent = currentInputStr || '';
+    }
+
+    function numpadConfirm() {
+      if (!selectedCell) return;
+      // Move to next empty hidden cell
+      const currentIdx = hiddenSet.findIndex(h => h.row === selectedCell.row && h.col === selectedCell.col);
+      for (let i = 1; i <= hiddenSet.length; i++) {
+        const next = hiddenSet[(currentIdx + i) % hiddenSet.length];
+        const key = `${next.row},${next.col}`;
+        if (!playerValues[key] || playerValues[key] === '') {
+          selectCell(next.row, next.col);
+          return;
+        }
+      }
+      // All filled — deselect
+      document.querySelectorAll('.cell.selected').forEach(c => c.classList.remove('selected'));
+      selectedCell = null;
+    }
+
+    // ===== Check all answers =====
+    function checkAnswers() {
+      let allCorrect = true;
+      let allFilled = true;
+
+      hiddenSet.forEach(({ row, col }) => {
+        const key = `${row},${col}`;
+        const cellEl = getCellElement(row, col);
+        const pv = playerValues[key];
+
+        if (!pv || pv === '') {
+          allFilled = false;
+          return;
+        }
+
+        cellEl.classList.remove('correct', 'wrong', 'selected');
+
+        if (parseInt(pv, 10) === grid[row][col]) {
+          cellEl.classList.add('correct');
+        } else {
+          cellEl.classList.add('wrong');
+          allCorrect = false;
+        }
+      });
+
+      if (allFilled && allCorrect) {
+        setTimeout(() => showWinScreen(), 600);
+      }
+    }
+
+    // ===== Hint =====
+    function useHint() {
+      const config = CONFIGS[currentDifficulty];
+      if (hintsUsed >= config.maxHints) return;
+
+      // Find unfilled or incorrect cells
+      const candidates = hiddenSet.filter(({ row, col }) => {
+        const key = `${row},${col}`;
+        const pv = playerValues[key];
+        return !pv || pv === '' || parseInt(pv, 10) !== grid[row][col];
+      });
+
+      if (candidates.length === 0) return;
+
+      const pick = candidates[randInt(0, candidates.length - 1)];
+      const key = `${pick.row},${pick.col}`;
+      playerValues[key] = String(grid[pick.row][pick.col]);
+
+      const cellEl = getCellElement(pick.row, pick.col);
+      if (cellEl) {
+        cellEl.textContent = grid[pick.row][pick.col];
+        cellEl.classList.remove('hidden', 'wrong', 'selected');
+        cellEl.classList.add('hint-reveal');
+        cellEl.style.cursor = 'default';
+        // Replace element to remove event listeners
+        const clone = cellEl.cloneNode(true);
+        cellEl.parentNode.replaceChild(clone, cellEl);
+        // Remove from hidden set so player can't overwrite
+        const idx = hiddenSet.findIndex(h => h.row === pick.row && h.col === pick.col);
+        if (idx !== -1) hiddenSet.splice(idx, 1);
+      }
+
+      // If the hinted cell was selected, deselect
+      if (selectedCell && selectedCell.row === pick.row && selectedCell.col === pick.col) {
+        selectedCell = null;
+      }
+
+      hintsUsed++;
+      updateHintCounter();
+    }
+
+    function updateHintCounter() {
+      if (!currentDifficulty) return;
+      const config = CONFIGS[currentDifficulty];
+      const el = document.getElementById('hintCounter');
+      el.textContent = T('hintText')(hintsUsed, config.maxHints);
+      const btn = document.getElementById('btnHint');
+      if (hintsUsed >= config.maxHints) {
+        btn.style.opacity = '0.4';
+        btn.style.pointerEvents = 'none';
+      } else {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
+    }
+
+    // ===== Win screen =====
+    function showWinScreen() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+
+      saveCompletedStats(currentDifficulty, elapsed, hintsUsed);
+
+      const stats = document.getElementById('winStats');
+      stats.innerHTML = `${T('timeText')(minutes, seconds)}<br>${T('hintsUsedText')(hintsUsed)}`;
+
+      showScreen('screenWin');
+      launchConfetti();
+    }
+
+    function playAgain() {
+      startGame(currentDifficulty);
+    }
+
+    function goToMenu() {
+      showScreen('screenDifficulty');
+    }
+
+    // ===== Confetti =====
+    function launchConfetti() {
+      const container = document.createElement('div');
+      container.className = 'confetti-container';
+      document.body.appendChild(container);
+
+      const colors = ['#e53935', '#ff9800', '#4caf50', '#2196f3', '#9c27b0', '#fdd835'];
+
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = randInt(0, 100) + '%';
+        piece.style.background = colors[randInt(0, colors.length - 1)];
+        piece.style.animationDuration = (randInt(20, 40) / 10) + 's';
+        piece.style.animationDelay = (randInt(0, 15) / 10) + 's';
+        piece.style.width = randInt(8, 14) + 'px';
+        piece.style.height = randInt(6, 12) + 'px';
+        piece.style.borderRadius = randInt(0, 1) ? '50%' : '2px';
+        container.appendChild(piece);
+      }
+
+      setTimeout(() => container.remove(), 5000);
+    }
+
+    // ===== Init =====
+    setLang(lang);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

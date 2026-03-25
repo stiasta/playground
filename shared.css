@@ -1,0 +1,203 @@
+/* ===== Shared CSS for Game Hub ===== */
+
+:root {
+  --color-bg: #f5f0eb;
+  --color-card: #ffffff;
+  --color-primary: #4a6fa5;
+  --color-primary-hover: #3a5a8a;
+  --color-easy: #4caf50;
+  --color-easy-hover: #388e3c;
+  --color-medium: #ff9800;
+  --color-medium-hover: #e68900;
+  --color-hard: #e53935;
+  --color-hard-hover: #c62828;
+  --color-text: #2c2c2c;
+  --color-text-light: #666;
+  --color-correct: #4caf50;
+  --color-wrong: #e53935;
+  --color-hint: #fdd835;
+  --color-cell-bg: #fff;
+  --color-cell-border: #bbb;
+  --color-cell-hidden: #e8f0fe;
+  --font-main: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --radius: 14px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 18px;
+}
+
+body {
+  font-family: var(--font-main);
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+/* ===== Header ===== */
+.site-header {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+}
+
+.site-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.lang-toggle {
+  background: var(--color-card);
+  border: 2px solid var(--color-cell-border);
+  border-radius: 30px;
+  padding: 6px 14px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  min-width: 56px;
+  text-align: center;
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus {
+  background: #e8e8e8;
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: var(--font-main);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 16px 32px;
+  transition: background 0.2s, transform 0.1s;
+  min-height: 56px;
+  min-width: 56px;
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--color-primary-hover); }
+
+.btn-easy {
+  background: var(--color-easy);
+  color: #fff;
+}
+
+.btn-easy:hover { background: var(--color-easy-hover); }
+
+.btn-medium {
+  background: var(--color-medium);
+  color: #fff;
+}
+
+.btn-medium:hover { background: var(--color-medium-hover); }
+
+.btn-hard {
+  background: var(--color-hard);
+  color: #fff;
+}
+
+.btn-hard:hover { background: var(--color-hard-hover); }
+
+.btn-extreme {
+  background: #7b1fa2;
+  color: #fff;
+}
+
+.btn-extreme:hover { background: #6a1a8e; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.btn-outline:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ===== Cards ===== */
+.game-card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-text);
+  transition: transform 0.15s, box-shadow 0.15s;
+  display: block;
+}
+
+.game-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+}
+
+.game-card .card-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.game-card .card-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.game-card .card-desc {
+  font-size: 1rem;
+  color: var(--color-text-light);
+}
+
+/* ===== Screen utility ===== */
+.screen {
+  display: none;
+  width: 100%;
+  max-width: 600px;
+  padding: 0 16px 40px;
+  flex-direction: column;
+  align-items: center;
+}
+
+.screen.active {
+  display: flex;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 400px) {
+  html { font-size: 16px; }
+  .site-header h1 { font-size: 1.3rem; }
+  .btn { padding: 14px 20px; font-size: 1.1rem; }
+}

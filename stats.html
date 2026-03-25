@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4a6fa5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.json">
+  <title>Statistikk</title>
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    main {
+      width: 100%;
+      max-width: 600px;
+      padding: 0 16px 48px;
+    }
+
+    .stats-game-section {
+      width: 100%;
+      margin-top: 28px;
+    }
+
+    .stats-game-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .stats-diff-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stats-card {
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 12px;
+      border-top: 5px solid #ccc;
+    }
+
+    .stats-card.diff-easy    { border-color: var(--color-easy); }
+    .stats-card.diff-medium  { border-color: var(--color-medium); }
+    .stats-card.diff-hard    { border-color: var(--color-hard); }
+    .stats-card.diff-extreme { border-color: #7b1fa2; }
+
+    .stats-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      white-space: nowrap;
+    }
+
+    .stats-card.diff-easy    .stats-card-title { color: var(--color-easy); }
+    .stats-card.diff-medium  .stats-card-title { color: var(--color-medium); }
+    .stats-card.diff-hard    .stats-card-title { color: var(--color-hard); }
+    .stats-card.diff-extreme .stats-card-title { color: #7b1fa2; }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      padding: 5px 0;
+      border-bottom: 1px solid #f0f0f0;
+      gap: 4px;
+    }
+
+    .stats-row:last-child {
+      border-bottom: none;
+    }
+
+    .stats-row .label {
+      color: var(--color-text-light);
+      flex-shrink: 0;
+    }
+
+    .stats-row .value {
+      font-weight: 700;
+      color: var(--color-text);
+      text-align: right;
+    }
+
+    .stats-empty {
+      text-align: center;
+      color: var(--color-text-light);
+      font-size: 1.1rem;
+      padding: 40px 20px 20px;
+      line-height: 2;
+    }
+
+    .reset-section {
+      width: 100%;
+      margin-top: 36px;
+      text-align: center;
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--color-hard);
+      border: 2px solid var(--color-hard);
+      width: 100%;
+    }
+
+    .btn-danger:hover {
+      background: var(--color-hard);
+      color: #fff;
+    }
+
+    /* Divider between game sections */
+    .stats-game-section + .stats-game-section {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 2px solid #e8e8e8;
+    }
+
+    @media (max-width: 360px) {
+      .stats-diff-grid { grid-template-columns: 1fr; }
+      .stats-row { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <a href="index.html" class="back-link" id="backLink">← <span data-i18n="back">Tilbake</span></a>
+    <h1 data-i18n="statsTitle">Statistikk</h1>
+    <button class="lang-toggle" id="langToggle" aria-label="Change language">🇳🇴</button>
+  </header>
+
+  <main id="statsMain"></main>
+
+  <script>
+    // ===== i18n =====
+    const i18n = {
+      no: {
+        statsTitle: 'Statistikk',
+        back: 'Tilbake',
+        noStats: 'Ingen spill spilt ennå!\nSpill et spill for å se statistikk her.',
+        played: 'Spill',
+        completed: 'Fullført',
+        winRate: 'Vinnprosent',
+        bestTime: 'Beste tid',
+        avgTime: 'Snitt tid',
+        totalHints: 'Hint brukt',
+        lastPlayed: 'Sist spilt',
+        never: 'Aldri',
+        resetBtn: '🗑 Nullstill all statistikk',
+        resetConfirm: 'Er du sikker på at du vil slette all statistikk?\nDette kan ikke angres.',
+        noData: '—',
+        easy: 'Lett',
+        medium: 'Medium',
+        hard: 'Vanskelig',
+        extreme: 'Ekstrem',
+        tallpyramide: 'Tallpyramide',
+      },
+      en: {
+        statsTitle: 'Statistics',
+        back: 'Back',
+        noStats: 'No games played yet!\nPlay a game to see statistics here.',
+        played: 'Played',
+        completed: 'Completed',
+        winRate: 'Win rate',
+        bestTime: 'Best time',
+        avgTime: 'Avg time',
+        totalHints: 'Hints used',
+        lastPlayed: 'Last played',
+        never: 'Never',
+        resetBtn: '🗑 Reset all statistics',
+        resetConfirm: 'Are you sure you want to delete all statistics?\nThis cannot be undone.',
+        noData: '—',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        extreme: 'Extreme',
+        tallpyramide: 'Number Pyramid',
+      }
+    };
+
+    let lang = 'no';
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'no') {
+      lang = urlParams.get('lang');
+    } else if (localStorage.getItem('gameLang')) {
+      lang = localStorage.getItem('gameLang');
+    }
+
+    function T(key) { return i18n[lang][key] || key; }
+
+    function setLang(l) {
+      lang = l;
+      localStorage.setItem('gameLang', lang);
+      document.getElementById('langToggle').textContent = lang === 'no' ? '🇳🇴' : '🇬🇧';
+      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+      document.getElementById('backLink').href = 'index.html?lang=' + lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (typeof i18n[lang][key] === 'string') el.textContent = i18n[lang][key];
+      });
+      renderStatsPage();
+    }
+
+    document.getElementById('langToggle').addEventListener('click', () => {
+      setLang(lang === 'no' ? 'en' : 'no');
+    });
+
+    // ===== Games registry — add new games here =====
+    const gameStatsRegistry = [
+      {
+        id: 'tallpyramide',
+        icon: '🔺',
+        titleKey: 'tallpyramide',
+        statsKey: 'tallpyramideStats',
+        difficulties: ['easy', 'medium', 'hard', 'extreme']
+      }
+      // { id: 'next-game', icon: '...', titleKey: '...', statsKey: '...Statistics', difficulties: [...] }
+    ];
+
+    // ===== Helpers =====
+    function formatTime(totalSeconds) {
+      if (totalSeconds === null || totalSeconds === undefined) return T('noData');
+      const m = Math.floor(totalSeconds / 60);
+      const s = totalSeconds % 60;
+      return m > 0 ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+    }
+
+    function formatDate(isoStr) {
+      if (!isoStr) return T('never');
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString(lang === 'no' ? 'nb-NO' : 'en-US', {
+          day: 'numeric', month: 'short', year: 'numeric'
+        });
+      } catch { return T('noData'); }
+    }
+
+    function loadGameStats(statsKey) {
+      try { return JSON.parse(localStorage.getItem(statsKey)) || {}; }
+      catch { return {}; }
+    }
+
+    function hasAnyData(registry) {
+      return registry.some(game => {
+        const s = loadGameStats(game.statsKey);
+        return game.difficulties.some(d => s[d] && s[d].played > 0);
+      });
+    }
+
+    // ===== Render =====
+    function renderStatsPage() {
+      const main = document.getElementById('statsMain');
+      main.innerHTML = '';
+
+      if (!hasAnyData(gameStatsRegistry)) {
+        const empty = document.createElement('p');
+        empty.className = 'stats-empty';
+        empty.textContent = T('noStats');
+        main.appendChild(empty);
+        appendResetButton(main);
+        return;
+      }
+
+      gameStatsRegistry.forEach(game => {
+        const allStats = loadGameStats(game.statsKey);
+
+        const section = document.createElement('div');
+        section.className = 'stats-game-section';
+
+        const title = document.createElement('h2');
+        title.className = 'stats-game-title';
+        title.textContent = `${game.icon} ${T(game.titleKey)}`;
+        section.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'stats-diff-grid';
+
+        game.difficulties.forEach(diff => {
+          const d = allStats[diff] || { played: 0, completed: 0, bestTime: null, totalTime: 0, totalHints: 0, lastPlayed: null };
+          const winRate = d.played > 0 ? Math.round((d.completed / d.played) * 100) : 0;
+          const avgTime = d.completed > 0 ? Math.round(d.totalTime / d.completed) : null;
+
+          const card = document.createElement('div');
+          card.className = `stats-card diff-${diff}`;
+
+          const rows = [
+            [T(diff), '', 'stats-card-title'],
+            [T('played'),     d.played],
+            [T('completed'),  d.completed],
+            [T('winRate'),    d.played > 0 ? winRate + '%' : T('noData')],
+            [T('bestTime'),   formatTime(d.bestTime)],
+            [T('avgTime'),    formatTime(avgTime)],
+            [T('totalHints'), d.totalHints || 0],
+            [T('lastPlayed'), formatDate(d.lastPlayed)],
+          ];
+
+          rows.forEach(([label, value, extraClass]) => {
+            if (extraClass === 'stats-card-title') {
+              const el = document.createElement('div');
+              el.className = 'stats-card-title';
+              el.textContent = label;
+              card.appendChild(el);
+              return;
+            }
+            const row = document.createElement('div');
+            row.className = 'stats-row';
+            const lEl = document.createElement('span');
+            lEl.className = 'label';
+            lEl.textContent = label;
+            const vEl = document.createElement('span');
+            vEl.className = 'value';
+            vEl.textContent = value;
+            row.appendChild(lEl);
+            row.appendChild(vEl);
+            card.appendChild(row);
+          });
+
+          grid.appendChild(card);
+        });
+
+        section.appendChild(grid);
+        main.appendChild(section);
+      });
+
+      appendResetButton(main);
+    }
+
+    function appendResetButton(container) {
+      const section = document.createElement('div');
+      section.className = 'reset-section';
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-danger';
+      btn.textContent = T('resetBtn');
+      btn.addEventListener('click', resetAllStats);
+      section.appendChild(btn);
+      container.appendChild(section);
+    }
+
+    function resetAllStats() {
+      if (!confirm(T('resetConfirm'))) return;
+      gameStatsRegistry.forEach(game => localStorage.removeItem(game.statsKey));
+      renderStatsPage();
+    }
+
+    // ===== Init =====
+    setLang(lang);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
