@@ -148,6 +148,8 @@
         bestTime: 'Beste tid',
         avgTime: 'Snitt tid',
         totalHints: 'Hint brukt',
+        bestCells: 'Beste ruter',
+        avgCells: 'Snitt ruter',
         lastPlayed: 'Sist spilt',
         never: 'Aldri',
         resetBtn: '🗑 Nullstill all statistikk',
@@ -158,6 +160,7 @@
         hard: 'Vanskelig',
         extreme: 'Ekstrem',
         tallpyramide: 'Tallpyramide',
+        labyrint: 'Labyrint',
       },
       en: {
         statsTitle: 'Statistics',
@@ -169,6 +172,8 @@
         bestTime: 'Best time',
         avgTime: 'Avg time',
         totalHints: 'Hints used',
+        bestCells: 'Best squares',
+        avgCells: 'Avg squares',
         lastPlayed: 'Last played',
         never: 'Never',
         resetBtn: '🗑 Reset all statistics',
@@ -179,6 +184,7 @@
         hard: 'Hard',
         extreme: 'Extreme',
         tallpyramide: 'Number Pyramid',
+        labyrint: 'Maze',
       }
     };
 
@@ -216,7 +222,16 @@
         icon: '🔺',
         titleKey: 'tallpyramide',
         statsKey: 'tallpyramideStats',
-        difficulties: ['easy', 'medium', 'hard', 'extreme']
+        difficulties: ['easy', 'medium', 'hard', 'extreme'],
+        supportsCells: false
+      },
+      {
+        id: 'labyrint',
+        icon: '🌀',
+        titleKey: 'labyrint',
+        statsKey: 'labyrintStats',
+        difficulties: ['easy', 'medium', 'hard'],
+        supportsCells: true
       }
       // { id: 'next-game', icon: '...', titleKey: '...', statsKey: '...Statistics', difficulties: [...] }
     ];
@@ -280,9 +295,19 @@
         grid.className = 'stats-diff-grid';
 
         game.difficulties.forEach(diff => {
-          const d = allStats[diff] || { played: 0, completed: 0, bestTime: null, totalTime: 0, totalHints: 0, lastPlayed: null };
+          const d = allStats[diff] || {
+            played: 0,
+            completed: 0,
+            bestTime: null,
+            totalTime: 0,
+            totalHints: 0,
+            bestCells: null,
+            totalCells: 0,
+            lastPlayed: null
+          };
           const winRate = d.played > 0 ? Math.round((d.completed / d.played) * 100) : 0;
           const avgTime = d.completed > 0 ? Math.round(d.totalTime / d.completed) : null;
+          const avgCells = d.completed > 0 ? Math.round(d.totalCells / d.completed) : null;
 
           const card = document.createElement('div');
           card.className = `stats-card diff-${diff}`;
@@ -294,6 +319,10 @@
             [T('winRate'),    d.played > 0 ? winRate + '%' : T('noData')],
             [T('bestTime'),   formatTime(d.bestTime)],
             [T('avgTime'),    formatTime(avgTime)],
+            ...(game.supportsCells ? [
+              [T('bestCells'), d.bestCells ?? T('noData')],
+              [T('avgCells'), avgCells ?? T('noData')],
+            ] : []),
             [T('totalHints'), d.totalHints || 0],
             [T('lastPlayed'), formatDate(d.lastPlayed)],
           ];
