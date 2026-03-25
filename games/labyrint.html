@@ -126,12 +126,6 @@
       min-width: 130px;
     }
 
-    .hint-counter {
-      font-size: 0.92rem;
-      color: var(--color-text-light);
-      text-align: center;
-    }
-
     .win-emoji {
       font-size: 4.8rem;
       margin-top: 10px;
@@ -246,7 +240,7 @@
 
   <section class="screen" id="screenGame">
     <div class="maze-shell">
-      <div class="instruction-box" data-i18n="playHelp">Start i den <strong>gronne</strong> ruten. Dra for a fargelegge veien. Du kan starte pa nytt fra en tidligere bla rute nar som helst.</div>
+      <div class="instruction-box" data-i18n="playHelp">Start i den <strong>grønne</strong> ruten. Dra for a fargelegge veien. Du kan starte pa nytt fra en tidligere bla rute nar som helst.</div>
       <div class="status-grid">
         <div class="status-card">
           <div class="status-label" data-i18n="drawnLabel">Ruter</div>
@@ -266,9 +260,7 @@
       </div>
       <div class="action-bar">
         <button class="btn btn-outline" id="btnReset" onclick="resetProgress()">↺ <span data-i18n="reset">Nullstill</span></button>
-        <button class="btn btn-outline" id="btnHint" onclick="useHint()">💡 <span data-i18n="hint">Hint</span></button>
       </div>
-      <p class="hint-counter" id="hintCounter"></p>
     </div>
   </section>
 
@@ -280,7 +272,6 @@
         <div class="score-row"><span data-i18n="drawnLabel">Ruter</span><span id="winDrawn">0</span></div>
         <div class="score-row"><span data-i18n="bestPathLabel">Korteste</span><span id="winBestPath">0</span></div>
         <div class="score-row"><span data-i18n="timeLabel">Tid</span><span id="winTime">0s</span></div>
-        <div class="score-row"><span data-i18n="hintLabel">Hint</span><span id="winHints">0</span></div>
       </div>
       <div class="record-note" id="recordNote"></div>
     </div>
@@ -299,14 +290,11 @@
         easy: 'Lett',
         medium: 'Medium',
         hard: 'Vanskelig',
-        playHelp: 'Start i den gronne ruten. Dra for a fargelegge veien. Du kan starte pa nytt fra en tidligere bla rute nar som helst.',
+        playHelp: 'Start i den grønne ruten. Dra for a fargelegge veien. Du kan starte pa nytt fra en tidligere bla rute nar som helst.',
         drawnLabel: 'Ruter',
         bestPathLabel: 'Korteste',
         timeLabel: 'Tid',
-        hintLabel: 'Hint',
         reset: 'Nullstill',
-        hint: 'Hint',
-        hintCounter: (used, max) => `Hint brukt: ${used} / ${max}`,
         winTitle: 'Du fant veien ut!',
         playAgain: 'Spill igjen',
         menu: 'Meny',
@@ -326,10 +314,7 @@
         drawnLabel: 'Squares',
         bestPathLabel: 'Shortest',
         timeLabel: 'Time',
-        hintLabel: 'Hints',
         reset: 'Reset',
-        hint: 'Hint',
-        hintCounter: (used, max) => `Hints used: ${used} / ${max}`,
         winTitle: 'You found the exit!',
         playAgain: 'Play again',
         menu: 'Menu',
@@ -349,9 +334,9 @@
     ];
 
     const CONFIGS = {
-      easy: { rows: 8, cols: 10, algorithm: 'dfs', maxHints: 3 },
-      medium: { rows: 12, cols: 14, algorithm: 'dfs', maxHints: 3 },
-      hard: { rows: 16, cols: 18, algorithm: 'prim', maxHints: 3 },
+      easy: { rows: 8, cols: 10, algorithm: 'dfs' },
+      medium: { rows: 12, cols: 14, algorithm: 'dfs' },
+      hard: { rows: 16, cols: 18, algorithm: 'prim' },
     };
 
     const STATS_KEY = 'labyrintStats';
@@ -367,9 +352,6 @@
     let cellSize = 24;
     let startTime = 0;
     let timerId = null;
-    let hintsUsed = 0;
-    let hintCells = [];
-    let hintTimeout = null;
     let solutionPath = [];
     let optimalPathLength = 0;
     let pointerLast = null;
@@ -445,7 +427,7 @@
       localStorage.setItem(STATS_KEY, JSON.stringify(stats));
     }
 
-    function saveCompletedStats(difficulty, elapsed, cells, hints) {
+    function saveCompletedStats(difficulty, elapsed, cells) {
       const stats = loadStats();
       if (!stats[difficulty]) stats[difficulty] = defaultDiffStats();
       const entry = stats[difficulty];
@@ -454,7 +436,6 @@
       entry.completed += 1;
       entry.totalTime += elapsed;
       entry.totalCells += cells;
-      entry.totalHints += hints;
       entry.lastPlayed = new Date().toISOString();
       if (entry.bestTime === null || elapsed < entry.bestTime) entry.bestTime = elapsed;
       if (entry.bestCells === null || cells < entry.bestCells) entry.bestCells = cells;
@@ -635,7 +616,7 @@
 
       coloredCells.forEach(key => {
         const { row, col } = parseKey(key);
-        ctx.fillStyle = hintCells.includes(key) ? '#ffe082' : '#9ecbff';
+        ctx.fillStyle = '#9ecbff';
         ctx.fillRect(col * cellSize + 2, row * cellSize + 2, cellSize - 2, cellSize - 2);
       });
 
@@ -677,9 +658,6 @@
     function updateCounters() {
       document.getElementById('drawnCounter').textContent = coloredCells.size || 1;
       document.getElementById('bestCounter').textContent = optimalPathLength || 0;
-      document.getElementById('hintCounter').textContent = currentDifficulty
-        ? T('hintCounter')(hintsUsed, CONFIGS[currentDifficulty].maxHints)
-        : '';
       if (startTime) {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         document.getElementById('timeCounter').textContent = T('timeText')(elapsed);
@@ -710,8 +688,6 @@
       currentCell = { row: 0, col: 0 };
       isDrawing = false;
       startTime = Date.now();
-      hintsUsed = 0;
-      hintCells = [];
       pointerLast = null;
       recordGameStart(difficulty);
       resizeCanvas();
@@ -725,8 +701,6 @@
       currentCell = { row: 0, col: 0 };
       isDrawing = false;
       pointerLast = null;
-      hintCells = [];
-      if (hintTimeout) clearTimeout(hintTimeout);
       renderMaze();
       updateCounters();
     }
@@ -852,36 +826,16 @@
       if (!isDrawing) pointerLast = null;
     });
 
-    function useHint() {
-      if (!currentDifficulty) return;
-      const config = CONFIGS[currentDifficulty];
-      if (hintsUsed >= config.maxHints) return;
-      const farthestIndex = solutionPath.reduce((best, key, index) => {
-        return coloredCells.has(key) ? index : best;
-      }, 0);
-      const preview = solutionPath.slice(farthestIndex + 1, farthestIndex + 5);
-      if (!preview.length) return;
-      hintCells = preview;
-      renderMaze();
-      if (hintTimeout) clearTimeout(hintTimeout);
-      hintTimeout = setTimeout(() => {
-        hintCells = [];
-        renderMaze();
-      }, 1500);
-      hintsUsed += 1;
-      updateCounters();
-    }
 
     function finishGame() {
       stopTimer();
       isDrawing = false;
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const cells = coloredCells.size;
-      const recordState = saveCompletedStats(currentDifficulty, elapsed, cells, hintsUsed);
+      const recordState = saveCompletedStats(currentDifficulty, elapsed, cells);
       document.getElementById('winDrawn').textContent = cells;
       document.getElementById('winBestPath').textContent = optimalPathLength;
       document.getElementById('winTime').textContent = T('timeText')(elapsed);
-      document.getElementById('winHints').textContent = hintsUsed;
       const note = document.getElementById('recordNote');
       if (recordState.newBestTime && recordState.newBestCells) note.textContent = T('recordBoth');
       else if (recordState.newBestTime) note.textContent = T('recordTime');
