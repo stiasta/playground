@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4a6fa5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../icons/icon.svg">
+  <link rel="manifest" href="../manifest.json">
+  <title>Sudoku</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .diff-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-top: 26px;
+    }
+
+    .diff-buttons .btn {
+      font-size: 1.25rem;
+      padding: 18px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .game-top {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--color-text-light);
+      font-size: 0.95rem;
+    }
+
+    .board-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .board {
+      display: grid;
+      gap: 0;
+      border: 3px solid #333;
+      background: #333;
+      touch-action: manipulation;
+    }
+
+    .cell {
+      border: 1px solid #999;
+      background: #fff;
+      color: #1f2937;
+      font-family: var(--font-main);
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      transition: background 0.15s, transform 0.08s;
+    }
+
+    .cell.size9 {
+      width: 42px;
+      height: 42px;
+      font-size: 1.15rem;
+    }
+
+    .cell.size16 {
+      width: 27px;
+      height: 27px;
+      font-size: 0.88rem;
+    }
+
+    .cell:active {
+      transform: scale(0.95);
+    }
+
+    .cell.given {
+      background: #eceff4;
+      color: #111827;
+    }
+
+    .cell.selected {
+      background: #dbeafe;
+      box-shadow: inset 0 0 0 2px var(--color-primary);
+    }
+
+    .cell.related {
+      background: #f1f5f9;
+    }
+
+    .cell.conflict {
+      background: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .thick-top { border-top: 2.5px solid #333; }
+    .thick-left { border-left: 2.5px solid #333; }
+    .thick-right { border-right: 2.5px solid #333; }
+    .thick-bottom { border-bottom: 2.5px solid #333; }
+
+    .keypad {
+      margin-top: 14px;
+      width: 100%;
+      display: grid;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .keypad.keypad9 {
+      grid-template-columns: repeat(5, minmax(48px, 1fr));
+      max-width: 540px;
+    }
+
+    .keypad.keypad16 {
+      grid-template-columns: repeat(6, minmax(44px, 1fr));
+      max-width: 560px;
+    }
+
+    .keypad button {
+      min-height: 48px;
+      border: 2px solid #d1d5db;
+      border-radius: 12px;
+      background: #fff;
+      font-family: var(--font-main);
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .keypad button:active {
+      background: #e5e7eb;
+    }
+
+    .action-bar {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .action-bar .btn {
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .win-box {
+      text-align: center;
+      margin-top: 20px;
+      color: var(--color-text-light);
+    }
+
+    .win-box .big {
+      font-size: 3.2rem;
+      margin-bottom: 10px;
+    }
+
+    @media (max-width: 430px) {
+      .cell.size9 {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+      }
+
+      .cell.size16 {
+        width: 22px;
+        height: 22px;
+        font-size: 0.74rem;
+      }
+
+      .keypad.keypad16 {
+        grid-template-columns: repeat(5, minmax(38px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a id="backLink" class="back-link" href="../index.html">← <span data-i18n="back">Tilbake</span></a>
+    <button class="lang-toggle" id="langToggle" aria-label="Change language">🇳🇴</button>
+  </header>
+
+  <main class="screen active" id="menuScreen">
+    <h1 data-i18n="title">Sudoku</h1>
+    <p style="margin-top: 8px; color: var(--color-text-light); text-align:center;" data-i18n="intro">
+      Velg nivå og fyll inn alle rutene riktig.
+    </p>
+    <div class="diff-buttons">
+      <button class="btn btn-easy" data-diff="easy" data-i18n="easyBtn">Lett (9x9)</button>
+      <button class="btn btn-medium" data-diff="medium" data-i18n="mediumBtn">Medium (9x9)</button>
+      <button class="btn btn-hard" data-diff="hard" data-i18n="hardBtn">Vanskelig (9x9)</button>
+      <button class="btn btn-extreme" data-diff="extreme" data-i18n="extremeBtn">Ekstra stor (16x16)</button>
+    </div>
+  </main>
+
+  <main class="screen" id="gameScreen">
+    <h1 id="gameTitle">Sudoku</h1>
+    <div class="game-top">
+      <div class="meta">
+        <span id="diffLabel"></span>
+        <span>•</span>
+        <span id="timer">0:00</span>
+        <span>•</span>
+        <span id="hintsUsed">Hint: 0</span>
+      </div>
+      <button class="btn btn-outline" id="backToMenuBtn" style="padding:8px 14px; min-height:42px; font-size:0.95rem;">↩</button>
+    </div>
+
+    <div class="board-wrap">
+      <div id="board" class="board" aria-label="Sudoku board"></div>
+    </div>
+
+    <div id="keypad" class="keypad"></div>
+
+    <div class="action-bar">
+      <button class="btn btn-primary" id="checkBtn" data-i18n="checkBtn">Sjekk</button>
+      <button class="btn btn-outline" id="hintBtn" data-i18n="hintBtn">Hint</button>
+      <button class="btn btn-outline" id="newBtn" data-i18n="newBtn">Nytt brett</button>
+    </div>
+
+    <p id="message" style="margin-top: 10px; min-height: 24px; text-align:center; color: var(--color-text-light);"></p>
+
+    <div class="win-box" id="winBox" style="display:none;">
+      <div class="big">🎉</div>
+      <p id="winText"></p>
+    </div>
+  </main>
+
+  <script>
+    const i18n = {
+      no: {
+        back: 'Tilbake',
+        title: 'Sudoku',
+        intro: 'Velg nivå og fyll inn alle rutene riktig.',
+        easyBtn: 'Lett (9x9)',
+        mediumBtn: 'Medium (9x9)',
+        hardBtn: 'Vanskelig (9x9)',
+        extremeBtn: 'Ekstra stor (16x16)',
+        easy: 'Lett',
+        medium: 'Medium',
+        hard: 'Vanskelig',
+        extreme: 'Ekstra stor',
+        checkBtn: 'Sjekk',
+        hintBtn: 'Hint',
+        newBtn: 'Nytt brett',
+        clear: 'Slett',
+        hintsLabel: 'Hint',
+        menuBtn: 'Meny',
+        invalidNow: 'Det er noen feil i brettet.',
+        looksGood: 'Ser bra ut så langt!',
+        pickCell: 'Trykk på en tom rute først.',
+        noHintCell: 'Ingen tomme ruter igjen for hint.',
+        solved: 'Du løste Sudoku på',
+        seconds: 'sekunder',
+        minutes: 'min',
+        notDone: 'Ikke ferdig enda.',
+        hardWarning: 'Ekstra stor bruker tall og bokstaver (1-9, A-G).',
+      },
+      en: {
+        back: 'Back',
+        title: 'Sudoku',
+        intro: 'Choose a level and fill all squares correctly.',
+        easyBtn: 'Easy (9x9)',
+        mediumBtn: 'Medium (9x9)',
+        hardBtn: 'Hard (9x9)',
+        extremeBtn: 'Extra Large (16x16)',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        extreme: 'Extra Large',
+        checkBtn: 'Check',
+        hintBtn: 'Hint',
+        newBtn: 'New board',
+        clear: 'Clear',
+        hintsLabel: 'Hints',
+        menuBtn: 'Menu',
+        invalidNow: 'There are mistakes on the board.',
+        looksGood: 'Looks good so far!',
+        pickCell: 'Tap an empty square first.',
+        noHintCell: 'No empty squares left for a hint.',
+        solved: 'You solved Sudoku in',
+        seconds: 'seconds',
+        minutes: 'min',
+        notDone: 'Not finished yet.',
+        hardWarning: 'Extra large uses numbers and letters (1-9, A-G).',
+      }
+    };
+
+    const DIFF_CONFIG = {
+      easy: { side: 9, box: 3, remove: 36, btnClass: 'btn-easy' },
+      medium: { side: 9, box: 3, remove: 46, btnClass: 'btn-medium' },
+      hard: { side: 9, box: 3, remove: 54, btnClass: 'btn-hard' },
+      extreme: { side: 16, box: 4, remove: 156, btnClass: 'btn-extreme' }
+    };
+
+    const SYMBOLS_9 = '123456789'.split('');
+    const SYMBOLS_16 = '123456789ABCDEFG'.split('');
+
+    let lang = 'no';
+    let currentDiff = null;
+    let puzzle = [];
+    let solution = [];
+    let givens = [];
+    let selected = null;
+    let hintCount = 0;
+    let startTime = 0;
+    let timerHandle = null;
+    let solved = false;
+
+    const $ = id => document.getElementById(id);
+
+    function t(key) {
+      return i18n[lang][key] || key;
+    }
+
+    function formatDuration(total) {
+      const m = Math.floor(total / 60);
+      const s = total % 60;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    }
+
+    function setMessage(msg, isError) {
+      const el = $('message');
+      el.textContent = msg || '';
+      el.style.color = isError ? '#b91c1c' : 'var(--color-text-light)';
+    }
+
+    function choose(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function shuffled(list) {
+      const a = list.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function range(n) {
+      return [...Array(n).keys()];
+    }
+
+    function generateSolvedGrid(side, box) {
+      const baseRows = range(box);
+      const baseCols = range(box);
+      const rowOrder = shuffled(baseRows).flatMap(g => shuffled(baseRows).map(r => g * box + r));
+      const colOrder = shuffled(baseCols).flatMap(g => shuffled(baseCols).map(c => g * box + c));
+      const nums = shuffled(range(side).map(n => n + 1));
+
+      const grid = rowOrder.map(r =>
+        colOrder.map(c => nums[(box * (r % box) + Math.floor(r / box) + c) % side])
+      );
+      return grid;
+    }
+
+    function makePuzzleFromSolution(fullGrid, side, removeCount) {
+      const board = fullGrid.map(row => row.slice());
+      const cells = [];
+      for (let r = 0; r < side; r++) {
+        for (let c = 0; c < side; c++) cells.push([r, c]);
+      }
+      shuffled(cells).slice(0, Math.min(removeCount, cells.length - 1)).forEach(([r, c]) => {
+        board[r][c] = 0;
+      });
+      return board;
+    }
+
+    function symbolsForSide(side) {
+      return side === 16 ? SYMBOLS_16 : SYMBOLS_9;
+    }
+
+    function valueToSymbol(v, side) {
+      if (!v) return '';
+      return symbolsForSide(side)[v - 1] || '';
+    }
+
+    function symbolToValue(s, side) {
+      const upper = String(s || '').toUpperCase();
+      const idx = symbolsForSide(side).indexOf(upper);
+      return idx >= 0 ? idx + 1 : 0;
+    }
+
+    function isCellRelated(r, c, selR, selC, box) {
+      if (r === selR && c === selC) return true;
+      if (r === selR || c === selC) return true;
+      return Math.floor(r / box) === Math.floor(selR / box) && Math.floor(c / box) === Math.floor(selC / box);
+    }
+
+    function buildBoardUI() {
+      const cfg = DIFF_CONFIG[currentDiff];
+      const side = cfg.side;
+      const box = cfg.box;
+      const board = $('board');
+      board.innerHTML = '';
+      board.style.gridTemplateColumns = `repeat(${side}, auto)`;
+
+      for (let r = 0; r < side; r++) {
+        for (let c = 0; c < side; c++) {
+          const b = document.createElement('button');
+          b.className = `cell ${side === 16 ? 'size16' : 'size9'}`;
+          const v = puzzle[r][c];
+          b.textContent = valueToSymbol(v, side);
+
+          if (givens[r][c]) b.classList.add('given');
+          if (selected && selected.r === r && selected.c === c) b.classList.add('selected');
+          if (selected && isCellRelated(r, c, selected.r, selected.c, box) && !(selected.r === r && selected.c === c)) {
+            b.classList.add('related');
+          }
+
+          if (r % box === 0) b.classList.add('thick-top');
+          if (c % box === 0) b.classList.add('thick-left');
+          if (r === side - 1) b.classList.add('thick-bottom');
+          if (c === side - 1) b.classList.add('thick-right');
+
+          b.addEventListener('click', () => {
+            if (solved) return;
+            if (givens[r][c]) {
+              selected = { r, c };
+              setMessage('');
+              buildBoardUI();
+              return;
+            }
+            selected = { r, c };
+            setMessage('');
+            buildBoardUI();
+          });
+
+          board.appendChild(b);
+        }
+      }
+    }
+
+    function buildKeypad() {
+      const cfg = DIFF_CONFIG[currentDiff];
+      const side = cfg.side;
+      const wrap = $('keypad');
+      wrap.innerHTML = '';
+      wrap.className = `keypad ${side === 16 ? 'keypad16' : 'keypad9'}`;
+
+      symbolsForSide(side).forEach(sym => {
+        const b = document.createElement('button');
+        b.textContent = sym;
+        b.addEventListener('click', () => placeSymbol(sym));
+        wrap.appendChild(b);
+      });
+
+      const clear = document.createElement('button');
+      clear.textContent = t('clear');
+      clear.addEventListener('click', () => placeSymbol(''));
+      wrap.appendChild(clear);
+    }
+
+    function placeSymbol(symbol) {
+      if (!selected || solved) {
+        setMessage(t('pickCell'), true);
+        return;
+      }
+      if (givens[selected.r][selected.c]) return;
+      const cfg = DIFF_CONFIG[currentDiff];
+      const value = symbol ? symbolToValue(symbol, cfg.side) : 0;
+      puzzle[selected.r][selected.c] = value;
+      setMessage('');
+      buildBoardUI();
+      maybeFinish();
+    }
+
+    function getConflictSet() {
+      const cfg = DIFF_CONFIG[currentDiff];
+      const side = cfg.side;
+      const box = cfg.box;
+      const bad = new Set();
+
+      function markDuplicates(cells) {
+        const seen = new Map();
+        cells.forEach(([r, c]) => {
+          const v = puzzle[r][c];
+          if (!v) return;
+          const prev = seen.get(v);
+          if (prev) {
+            bad.add(`${r}:${c}`);
+            bad.add(`${prev[0]}:${prev[1]}`);
+          } else {
+            seen.set(v, [r, c]);
+          }
+        });
+      }
+
+      for (let r = 0; r < side; r++) {
+        markDuplicates(range(side).map(c => [r, c]));
+      }
+      for (let c = 0; c < side; c++) {
+        markDuplicates(range(side).map(r => [r, c]));
+      }
+      for (let br = 0; br < side; br += box) {
+        for (let bc = 0; bc < side; bc += box) {
+          const cells = [];
+          for (let r = 0; r < box; r++) {
+            for (let c = 0; c < box; c++) cells.push([br + r, bc + c]);
+          }
+          markDuplicates(cells);
+        }
+      }
+      return bad;
+    }
+
+    function paintConflicts() {
+      const conflicts = getConflictSet();
+      const all = $('board').querySelectorAll('.cell');
+      const cfg = DIFF_CONFIG[currentDiff];
+      const side = cfg.side;
+      all.forEach((el, idx) => {
+        const r = Math.floor(idx / side);
+        const c = idx % side;
+        if (conflicts.has(`${r}:${c}`)) el.classList.add('conflict');
+      });
+      return conflicts.size;
+    }
+
+    function isSolvedCorrectly() {
+      const cfg = DIFF_CONFIG[currentDiff];
+      const side = cfg.side;
+      for (let r = 0; r < side; r++) {
+        for (let c = 0; c < side; c++) {
+          if (puzzle[r][c] !== solution[r][c]) return false;
+        }
+      }
+      return true;
+    }
+
+    function maybeFinish() {
+      const cfg = DIFF_CONFIG[currentDiff];
+      for (let r = 0; r < cfg.side; r++) {
+        for (let c = 0; c < cfg.side; c++) {
+          if (!puzzle[r][c]) return;
+        }
+      }
+      if (isSolvedCorrectly()) finishGame();
+    }
+
+    function checkBoard() {
+      if (solved) return;
+      buildBoardUI();
+      const count = paintConflicts();
+      if (count > 0) {
+        setMessage(t('invalidNow'), true);
+        return;
+      }
+      setMessage(isSolvedCorrectly() ? '' : t('looksGood'), false);
+      maybeFinish();
+    }
+
+    function useHint() {
+      if (solved) return;
+      const cfg = DIFF_CONFIG[currentDiff];
+      const empty = [];
+      for (let r = 0; r < cfg.side; r++) {
+        for (let c = 0; c < cfg.side; c++) {
+          if (!puzzle[r][c] && !givens[r][c]) empty.push([r, c]);
+        }
+      }
+      if (empty.length === 0) {
+        setMessage(t('noHintCell'), true);
+        return;
+      }
+      const [r, c] = choose(empty);
+      puzzle[r][c] = solution[r][c];
+      selected = { r, c };
+      hintCount += 1;
+      updateMeta();
+      setMessage('');
+      buildBoardUI();
+      maybeFinish();
+    }
+
+    function tickTimer() {
+      const sec = Math.floor((Date.now() - startTime) / 1000);
+      $('timer').textContent = formatDuration(sec);
+    }
+
+    function updateMeta() {
+      $('diffLabel').textContent = `${t(currentDiff)} • ${DIFF_CONFIG[currentDiff].side}x${DIFF_CONFIG[currentDiff].side}`;
+      $('hintsUsed').textContent = `${t('hintsLabel')}: ${hintCount}`;
+      $('backToMenuBtn').textContent = `↩ ${t('menuBtn')}`;
+      if (currentDiff === 'extreme') {
+        setMessage(t('hardWarning'), false);
+      }
+    }
+
+    function showMenu() {
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = null;
+      $('menuScreen').classList.add('active');
+      $('gameScreen').classList.remove('active');
+      setMessage('');
+    }
+
+    function deepCopyGrid(grid) {
+      return grid.map(row => row.slice());
+    }
+
+    function loadStats() {
+      try {
+        return JSON.parse(localStorage.getItem('sudokuStats')) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveStats(data) {
+      localStorage.setItem('sudokuStats', JSON.stringify(data));
+    }
+
+    function ensureStatsDiff(diff, stats) {
+      if (!stats[diff]) {
+        stats[diff] = {
+          played: 0,
+          completed: 0,
+          bestTime: null,
+          totalTime: 0,
+          totalHints: 0,
+          lastPlayed: null
+        };
+      }
+    }
+
+    function recordPlayed(diff) {
+      const stats = loadStats();
+      ensureStatsDiff(diff, stats);
+      stats[diff].played += 1;
+      stats[diff].lastPlayed = new Date().toISOString();
+      saveStats(stats);
+    }
+
+    function recordCompleted(diff, timeSec, hintsUsed) {
+      const stats = loadStats();
+      ensureStatsDiff(diff, stats);
+      const s = stats[diff];
+      s.completed += 1;
+      s.totalTime += timeSec;
+      s.totalHints += hintsUsed;
+      s.lastPlayed = new Date().toISOString();
+      if (s.bestTime === null || timeSec < s.bestTime) s.bestTime = timeSec;
+      saveStats(stats);
+    }
+
+    function finishGame() {
+      solved = true;
+      if (timerHandle) clearInterval(timerHandle);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      recordCompleted(currentDiff, elapsed, hintCount);
+
+      const min = Math.floor(elapsed / 60);
+      const sec = elapsed % 60;
+      const text = min > 0
+        ? `${t('solved')} ${min} ${t('minutes')} ${sec} ${t('seconds')}!`
+        : `${t('solved')} ${sec} ${t('seconds')}!`;
+
+      $('winBox').style.display = 'block';
+      $('winText').textContent = text;
+      setMessage('');
+      buildBoardUI();
+    }
+
+    function startGame(diff) {
+      currentDiff = diff;
+      const cfg = DIFF_CONFIG[diff];
+      hintCount = 0;
+      selected = null;
+      solved = false;
+      $('winBox').style.display = 'none';
+
+      solution = generateSolvedGrid(cfg.side, cfg.box);
+      puzzle = makePuzzleFromSolution(solution, cfg.side, cfg.remove);
+      givens = puzzle.map(row => row.map(v => v !== 0));
+
+      $('menuScreen').classList.remove('active');
+      $('gameScreen').classList.add('active');
+      $('gameTitle').textContent = `Sudoku (${t(diff)})`;
+      updateMeta();
+      buildBoardUI();
+      buildKeypad();
+
+      startTime = Date.now();
+      tickTimer();
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = setInterval(tickTimer, 1000);
+
+      recordPlayed(diff);
+    }
+
+    function setLang(next) {
+      lang = next;
+      localStorage.setItem('gameLang', lang);
+      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+      $('langToggle').textContent = lang === 'no' ? '🇳🇴' : '🇬🇧';
+      $('backLink').href = `../index.html?lang=${lang}`;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang][key]) el.textContent = i18n[lang][key];
+      });
+
+      if (currentDiff) {
+        updateMeta();
+        buildKeypad();
+      }
+    }
+
+    function init() {
+      const url = new URLSearchParams(window.location.search);
+      const forced = url.get('lang');
+      const stored = localStorage.getItem('gameLang');
+      setLang(forced === 'en' || forced === 'no' ? forced : (stored === 'en' ? 'en' : 'no'));
+
+      document.querySelectorAll('[data-diff]').forEach(btn => {
+        btn.addEventListener('click', () => startGame(btn.dataset.diff));
+      });
+
+      $('langToggle').addEventListener('click', () => {
+        setLang(lang === 'no' ? 'en' : 'no');
+      });
+      $('checkBtn').addEventListener('click', checkBoard);
+      $('hintBtn').addEventListener('click', useHint);
+      $('newBtn').addEventListener('click', () => startGame(currentDiff));
+      $('backToMenuBtn').addEventListener('click', showMenu);
+
+      window.addEventListener('keydown', e => {
+        if (!$('gameScreen').classList.contains('active') || solved || !currentDiff) return;
+        const cfg = DIFF_CONFIG[currentDiff];
+        if (e.key === 'Backspace' || e.key === 'Delete') {
+          placeSymbol('');
+          return;
+        }
+        const v = symbolToValue(e.key, cfg.side);
+        if (v) placeSymbol(valueToSymbol(v, cfg.side));
+      });
+    }
+
+    init();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../sw.js').catch(() => {});
+    }
+  </script>
+  <!-- 100% privacy-first analytics -->
+  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+</body>
+</html>
