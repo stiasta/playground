@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4a6fa5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="../icons/icon.svg">
+  <link rel="manifest" href="../manifest.json">
+  <title>Ordsok</title>
+  <link rel="stylesheet" href="../shared.css">
+  <style>
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--color-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .diff-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    .diff-buttons .btn {
+      font-size: 1.22rem;
+      padding: 18px;
+    }
+
+    .game-layout {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .status-bar {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      justify-content: center;
+      color: var(--color-text-light);
+      font-size: 0.96rem;
+      text-align: center;
+    }
+
+    .instructions {
+      width: 100%;
+      text-align: center;
+      color: var(--color-text-light);
+      font-size: 0.98rem;
+      line-height: 1.45;
+    }
+
+    .board-shell {
+      width: 100%;
+      background: var(--color-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .board-wrap {
+      width: 100%;
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .letter-board {
+      display: grid;
+      gap: 2px;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .letter-cell {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 2px solid #d1d9e6;
+      background: #fff;
+      color: #1f2937;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.02rem;
+      transition: background 0.15s, border-color 0.15s, transform 0.08s;
+    }
+
+    .letter-cell.active {
+      background: #dbeafe;
+      border-color: var(--color-primary);
+      transform: scale(1.03);
+    }
+
+    .letter-cell.hint {
+      background: #fff6bf;
+      border-color: #f2b705;
+    }
+
+    .letter-cell.found {
+      background: #ccebc8;
+      border-color: #4caf50;
+      color: #16371d;
+    }
+
+    .word-panel {
+      width: 100%;
+      background: var(--color-card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .word-panel h2 {
+      font-size: 1.1rem;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .word-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      list-style: none;
+    }
+
+    .word-list li {
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f6f8fb;
+      text-align: center;
+      font-weight: 600;
+      color: var(--color-text);
+      border: 2px solid transparent;
+    }
+
+    .word-list li.found {
+      background: #e9f7e7;
+      border-color: #4caf50;
+      color: #2f6f32;
+      text-decoration: line-through;
+    }
+
+    .action-bar {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .action-bar .btn {
+      flex: 1;
+      min-width: 130px;
+    }
+
+    .message {
+      min-height: 24px;
+      text-align: center;
+      color: var(--color-text-light);
+      font-size: 0.96rem;
+    }
+
+    .win-emoji {
+      font-size: 5rem;
+      margin: 20px 0;
+      animation: pop 0.6s;
+    }
+
+    .win-stats {
+      font-size: 1.16rem;
+      color: var(--color-text-light);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .win-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      margin-top: 24px;
+    }
+
+    .confetti-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000;
+      overflow: hidden;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -20px;
+      animation: confetti-fall linear forwards;
+    }
+
+    @keyframes confetti-fall {
+      0% { top: -20px; opacity: 1; transform: rotate(0deg); }
+      100% { top: 110vh; opacity: 0; transform: rotate(720deg); }
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+
+    @media (min-width: 560px) {
+      .game-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        align-items: start;
+      }
+
+      .word-panel {
+        position: sticky;
+        top: 12px;
+      }
+
+      .word-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .letter-cell {
+        width: 30px;
+        height: 30px;
+        font-size: 0.92rem;
+      }
+
+      .word-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .letter-cell {
+        width: 26px;
+        height: 26px;
+        font-size: 0.82rem;
+        border-radius: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a href="../index.html" class="back-link" id="backLink">← <span data-i18n="back">Tilbake</span></a>
+    <h1 data-i18n="gameTitle">Ordsok</h1>
+    <button class="lang-toggle" id="langToggle" aria-label="Change language">🇳🇴</button>
+  </header>
+
+  <section class="screen active" id="screenDifficulty">
+    <p style="font-size:4rem; margin-top:16px;">🔎</p>
+    <p style="font-size:1.1rem; color:var(--color-text-light); text-align:center; margin-top:12px;" data-i18n="chooseLevel">Velg vanskelighetsgrad:</p>
+    <div class="diff-buttons">
+      <button class="btn btn-easy" onclick="startGame('easy')"><span data-i18n="easy">Lett</span> <span style="opacity:0.7">(8 x 8)</span></button>
+      <button class="btn btn-medium" onclick="startGame('medium')"><span data-i18n="medium">Medium</span> <span style="opacity:0.7">(10 x 10)</span></button>
+      <button class="btn btn-hard" onclick="startGame('hard')"><span data-i18n="hard">Vanskelig</span> <span style="opacity:0.7">(12 x 12)</span></button>
+      <button class="btn btn-extreme" onclick="startGame('extreme')"><span data-i18n="extreme">Ekstrem</span> <span style="opacity:0.7">(14 x 14)</span></button>
+    </div>
+  </section>
+
+  <section class="screen" id="screenGame">
+    <div class="status-bar">
+      <span id="difficultyLabel"></span>
+      <span>•</span>
+      <span id="timerLabel">0:00</span>
+      <span>•</span>
+      <span id="hintLabel"></span>
+    </div>
+    <p class="instructions" data-i18n="instructions">Dra over bokstavene for a markere et ord. Ord kan sta vannrett, loddrett, diagonalt og baklengs.</p>
+    <div class="game-layout">
+      <div class="board-shell">
+        <div class="board-wrap">
+          <div class="letter-board" id="board"></div>
+        </div>
+      </div>
+      <aside class="word-panel">
+        <h2 data-i18n="wordsToFind">Ord du skal finne</h2>
+        <ul class="word-list" id="wordList"></ul>
+      </aside>
+    </div>
+    <div class="action-bar" style="margin-top:14px;">
+      <button class="btn btn-outline" id="btnHint" onclick="useHint()">💡 <span data-i18n="hint">Hint</span></button>
+      <button class="btn btn-primary" onclick="restartCurrentGame()">🔄 <span data-i18n="newBoard">Nytt brett</span></button>
+      <button class="btn btn-outline" onclick="goToMenu()">🏠 <span data-i18n="menu">Meny</span></button>
+    </div>
+    <p class="message" id="message"></p>
+  </section>
+
+  <section class="screen" id="screenWin">
+    <div class="win-emoji">🎉</div>
+    <h2 data-i18n="winTitle" style="font-size:1.8rem;">Gratulerer!</h2>
+    <div class="win-stats" id="winStats"></div>
+    <div class="win-buttons">
+      <button class="btn btn-primary" onclick="restartCurrentGame()">🔄 <span data-i18n="playAgain">Spill igjen</span></button>
+      <button class="btn btn-outline" onclick="goToMenu()">🏠 <span data-i18n="menu">Meny</span></button>
+    </div>
+  </section>
+
+  <script>
+    const i18n = {
+      no: {
+        gameTitle: 'Ordsok',
+        back: 'Tilbake',
+        chooseLevel: 'Velg vanskelighetsgrad:',
+        easy: 'Lett',
+        medium: 'Medium',
+        hard: 'Vanskelig',
+        extreme: 'Ekstrem',
+        instructions: 'Dra over bokstavene for a markere et ord. Ord kan sta vannrett, loddrett, diagonalt og baklengs.',
+        wordsToFind: 'Ord du skal finne',
+        hint: 'Hint',
+        newBoard: 'Nytt brett',
+        menu: 'Meny',
+        playAgain: 'Spill igjen',
+        winTitle: 'Gratulerer!',
+        foundWord: word => `Fant: ${word}`,
+        notAWord: 'Det var ikke et av ordene.',
+        hintText: (used, max) => `Hint brukt: ${used} / ${max}`,
+        hintWord: word => `Hint: ordet ${word} starter her.`,
+        noHints: 'Ingen hint igjen.',
+        allFound: 'Du fant alle ordene!',
+        timeText: (m, s) => `Tid: ${m}m ${s}s`,
+        hintsUsedText: n => `Hint brukt: ${n}`,
+        wordsFoundText: (f, total) => `Ord funnet: ${f} / ${total}`,
+        levelLabel: level => `Niva: ${level}`,
+      },
+      en: {
+        gameTitle: 'Word Search',
+        back: 'Back',
+        chooseLevel: 'Choose difficulty:',
+        easy: 'Easy',
+        medium: 'Medium',
+        hard: 'Hard',
+        extreme: 'Extreme',
+        instructions: 'Drag over the letters to mark a word. Words may be horizontal, vertical, diagonal, and backwards.',
+        wordsToFind: 'Words to find',
+        hint: 'Hint',
+        newBoard: 'New board',
+        menu: 'Menu',
+        playAgain: 'Play again',
+        winTitle: 'Congratulations!',
+        foundWord: word => `Found: ${word}`,
+        notAWord: 'That was not one of the words.',
+        hintText: (used, max) => `Hints used: ${used} / ${max}`,
+        hintWord: word => `Hint: the word ${word} starts here.`,
+        noHints: 'No hints left.',
+        allFound: 'You found all the words!',
+        timeText: (m, s) => `Time: ${m}m ${s}s`,
+        hintsUsedText: n => `Hints used: ${n}`,
+        wordsFoundText: (f, total) => `Words found: ${f} / ${total}`,
+        levelLabel: level => `Level: ${level}`,
+      }
+    };
+
+    const CONFIGS = {
+      easy: { size: 8, words: 5, minLength: 3, maxLength: 6, maxHints: 3, directions: [[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,-1]] },
+      medium: { size: 10, words: 7, minLength: 4, maxLength: 7, maxHints: 3, directions: [[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]] },
+      hard: { size: 12, words: 9, minLength: 4, maxLength: 9, maxHints: 3, directions: [[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]] },
+      extreme: { size: 14, words: 12, minLength: 5, maxLength: 10, maxHints: 3, directions: [[0,1],[1,0],[-1,0],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]] }
+    };
+
+    const WORD_POOLS = {
+      no: [
+        'HUND','KATT','FISK','HEST','FUGL','SKOG','SOL','MAANE','STJERNE','VIND','REGN','SNO','IS','SOMMER','VINTER','HOST','VAAR',
+        'SKOLE','BOK','BLYANT','VISKER','SEKK','BALL','LEK','SPILL','TIMER','HELG','VENN','FAMILIE','MOR','FAR','SOSTER','BROR',
+        'EPLE','PARE','BANAN','DRUE','MELK','BROD','SMOR','OST','KAKER','SUPPE','PASTA','RIS','TE','KAFFE','SAFT',
+        'SKJORTE','BUKSE','LUE','VOTT','SKO','SOKK','JAKKE','KJOLE','GENSER','SHORTS',
+        'SMIL','GLEDE','OMSORG','MORO','ROLIG','SNILL','TRYGG','MODIG','STERK','GLAD',
+        'TRE','BLOMST','STEIN','ELV','HAV','FJELL','STRAND','MOSE','BJORN','REV','UGLE','SEBRA'
+      ],
+      en: [
+        'DOG','CAT','FISH','HORSE','BIRD','FOREST','SUN','MOON','STAR','WIND','RAIN','SNOW','ICE','SUMMER','WINTER','SPRING','AUTUMN',
+        'SCHOOL','BOOK','PENCIL','ERASER','BAG','BALL','GAME','PLAY','TIMER','WEEKEND','FRIEND','FAMILY','MOTHER','FATHER','SISTER','BROTHER',
+        'APPLE','PEAR','BANANA','GRAPE','MILK','BREAD','CHEESE','SOUP','PASTA','RICE','TEA','COFFEE','JUICE',
+        'SHIRT','PANTS','HAT','MITTEN','SHOE','SOCK','JACKET','DRESS','SWEATER','SHORTS',
+        'SMILE','HAPPY','CALM','KIND','BRAVE','STRONG','CARING','FUN','SAFE','CHEER',
+        'TREE','FLOWER','STONE','RIVER','OCEAN','MOUNTAIN','BEACH','MOSS','BEAR','FOX','OWL','ZEBRA'
+      ]
+    };
+
+    const FILL_ALPHABET = {
+      no: 'ABCDEFGHIJKLMNOPQRSTUVWXYZAEIOUY'.split(''),
+      en: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+    };
+
+    let lang = 'no';
+    let currentDifficulty = null;
+    let board = [];
+    let words = [];
+    let startTime = 0;
+    let timerHandle = null;
+    let hintsUsed = 0;
+    let currentSelection = null;
+    let activePointerId = null;
+    let hintCells = [];
+
+    function T(key) { return i18n[lang][key] || key; }
+    function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+    function shuffle(items) {
+      const copy = items.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function range(length) {
+      return Array.from({ length }, (_, index) => index);
+    }
+
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function setMessage(text, isError) {
+      const el = document.getElementById('message');
+      el.textContent = text || '';
+      el.style.color = isError ? '#b42318' : 'var(--color-text-light)';
+    }
+
+    function chooseWords(config) {
+      const pool = WORD_POOLS[lang].filter(word => word.length >= config.minLength && word.length <= Math.min(config.maxLength, config.size));
+      return shuffle(pool).slice(0, config.words);
+    }
+
+    function createEmptyBoard(size) {
+      return Array.from({ length: size }, () => Array(size).fill(''));
+    }
+
+    function inBounds(size, row, col) {
+      return row >= 0 && row < size && col >= 0 && col < size;
+    }
+
+    function pathCells(startRow, startCol, direction, length) {
+      const cells = [];
+      for (let step = 0; step < length; step++) {
+        cells.push({ row: startRow + direction[0] * step, col: startCol + direction[1] * step });
+      }
+      return cells;
+    }
+
+    function serializeCells(cells) {
+      return cells.map(cell => `${cell.row}:${cell.col}`).join('|');
+    }
+
+    function canPlaceWord(grid, word, row, col, direction) {
+      const size = grid.length;
+      const cells = pathCells(row, col, direction, word.length);
+      return cells.every((cell, index) => {
+        if (!inBounds(size, cell.row, cell.col)) return false;
+        const current = grid[cell.row][cell.col];
+        return !current || current === word[index];
+      });
+    }
+
+    function placeWord(grid, word, directionSet) {
+      const size = grid.length;
+      for (let attempt = 0; attempt < 250; attempt++) {
+        const direction = directionSet[randInt(0, directionSet.length - 1)];
+        const row = randInt(0, size - 1);
+        const col = randInt(0, size - 1);
+        if (!canPlaceWord(grid, word, row, col, direction)) continue;
+
+        const cells = pathCells(row, col, direction, word.length);
+        cells.forEach((cell, index) => {
+          grid[cell.row][cell.col] = word[index];
+        });
+        return {
+          word,
+          found: false,
+          cells,
+          pathKey: serializeCells(cells),
+          reversePathKey: serializeCells(cells.slice().reverse()),
+          hintCell: cells[0]
+        };
+      }
+      return null;
+    }
+
+    function fillEmptyCells(grid) {
+      const alphabet = FILL_ALPHABET[lang];
+      for (let row = 0; row < grid.length; row++) {
+        for (let col = 0; col < grid.length; col++) {
+          if (!grid[row][col]) {
+            grid[row][col] = alphabet[randInt(0, alphabet.length - 1)];
+          }
+        }
+      }
+    }
+
+    function buildPuzzle(config) {
+      for (let boardTry = 0; boardTry < 40; boardTry++) {
+        const grid = createEmptyBoard(config.size);
+        const chosenWords = chooseWords(config);
+        const placedWords = [];
+
+        for (const word of chosenWords) {
+          const placed = placeWord(grid, word, shuffle(config.directions));
+          if (!placed) break;
+          placedWords.push(placed);
+        }
+
+        if (placedWords.length === config.words) {
+          fillEmptyCells(grid);
+          return { grid, placedWords };
+        }
+      }
+      throw new Error('Could not generate word search board');
+    }
+
+    function renderBoard() {
+      const boardEl = document.getElementById('board');
+      const size = board.length;
+      boardEl.innerHTML = '';
+      boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+
+      const foundCells = new Set(words.flatMap(word => word.found ? word.cells.map(cell => `${cell.row}:${cell.col}`) : []));
+      const activeCells = new Set(currentSelection ? currentSelection.cells.map(cell => `${cell.row}:${cell.col}`) : []);
+      const hinted = new Set(hintCells.map(cell => `${cell.row}:${cell.col}`));
+
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          const cell = document.createElement('div');
+          cell.className = 'letter-cell';
+          cell.dataset.row = row;
+          cell.dataset.col = col;
+          cell.textContent = board[row][col];
+          const key = `${row}:${col}`;
+          if (foundCells.has(key)) cell.classList.add('found');
+          if (hinted.has(key)) cell.classList.add('hint');
+          if (activeCells.has(key)) cell.classList.add('active');
+          boardEl.appendChild(cell);
+        }
+      }
+    }
+
+    function renderWordList() {
+      const list = document.getElementById('wordList');
+      list.innerHTML = '';
+      words.forEach(entry => {
+        const item = document.createElement('li');
+        item.textContent = entry.word;
+        if (entry.found) item.classList.add('found');
+        list.appendChild(item);
+      });
+    }
+
+    function updateStatusBar() {
+      if (!currentDifficulty) return;
+      document.getElementById('difficultyLabel').textContent = T('levelLabel')(T(currentDifficulty));
+      document.getElementById('hintLabel').textContent = T('hintText')(hintsUsed, CONFIGS[currentDifficulty].maxHints);
+      const hintButton = document.getElementById('btnHint');
+      hintButton.style.opacity = hintsUsed >= CONFIGS[currentDifficulty].maxHints ? '0.45' : '1';
+      hintButton.style.pointerEvents = hintsUsed >= CONFIGS[currentDifficulty].maxHints ? 'none' : 'auto';
+    }
+
+    function tickTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      document.getElementById('timerLabel').textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+    }
+
+    function recordGameStart(difficulty) {
+      const stats = loadStats();
+      const entry = ensureStatsDifficulty(stats, difficulty);
+      entry.played += 1;
+      entry.lastPlayed = new Date().toISOString();
+      saveStats(stats);
+    }
+
+    function saveCompletedStats(difficulty, elapsed, hints) {
+      const stats = loadStats();
+      const entry = ensureStatsDifficulty(stats, difficulty);
+      entry.completed += 1;
+      entry.totalTime += elapsed;
+      entry.totalHints += hints;
+      entry.lastPlayed = new Date().toISOString();
+      if (entry.bestTime === null || elapsed < entry.bestTime) entry.bestTime = elapsed;
+      saveStats(stats);
+    }
+
+    function loadStats() {
+      try {
+        return JSON.parse(localStorage.getItem('ordsokStats')) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveStats(stats) {
+      localStorage.setItem('ordsokStats', JSON.stringify(stats));
+    }
+
+    function ensureStatsDifficulty(stats, difficulty) {
+      if (!stats[difficulty]) {
+        stats[difficulty] = {
+          played: 0,
+          completed: 0,
+          bestTime: null,
+          totalTime: 0,
+          totalHints: 0,
+          lastPlayed: null
+        };
+      }
+      return stats[difficulty];
+    }
+
+    function nearestSelectionLine(start, end, config) {
+      const size = board.length;
+      let best = null;
+      for (const direction of config.directions) {
+        let step = 0;
+        while (inBounds(size, start.row + direction[0] * step, start.col + direction[1] * step)) {
+          const row = start.row + direction[0] * step;
+          const col = start.col + direction[1] * step;
+          const dr = row - end.row;
+          const dc = col - end.col;
+          const distance = dr * dr + dc * dc;
+          if (!best || distance < best.distance) {
+            best = { distance, cells: pathCells(start.row, start.col, direction, step + 1) };
+          }
+          step += 1;
+        }
+      }
+      return best ? best.cells : [start];
+    }
+
+    function cellFromElement(element) {
+      const target = element && element.closest ? element.closest('.letter-cell') : null;
+      if (!target) return null;
+      return {
+        row: Number(target.dataset.row),
+        col: Number(target.dataset.col)
+      };
+    }
+
+    function pointerCell(clientX, clientY) {
+      return cellFromElement(document.elementFromPoint(clientX, clientY));
+    }
+
+    function clearHintCells() {
+      if (!hintCells.length) return;
+      hintCells = [];
+      renderBoard();
+    }
+
+    function startSelection(cell, pointerId) {
+      clearHintCells();
+      activePointerId = pointerId;
+      currentSelection = { start: cell, end: cell, cells: [cell] };
+      renderBoard();
+    }
+
+    function updateSelection(cell) {
+      if (!currentSelection || !cell) return;
+      currentSelection.end = cell;
+      currentSelection.cells = nearestSelectionLine(currentSelection.start, cell, CONFIGS[currentDifficulty]);
+      renderBoard();
+    }
+
+    function finishSelection() {
+      if (!currentSelection) return;
+      const pathKey = serializeCells(currentSelection.cells);
+      const match = words.find(entry => !entry.found && (entry.pathKey === pathKey || entry.reversePathKey === pathKey));
+
+      if (match) {
+        match.found = true;
+        setMessage(T('foundWord')(match.word), false);
+        renderWordList();
+        if (words.every(entry => entry.found)) {
+          setTimeout(showWinScreen, 220);
+        }
+      } else {
+        setMessage(T('notAWord'), true);
+      }
+
+      currentSelection = null;
+      activePointerId = null;
+      renderBoard();
+    }
+
+    function attachBoardEvents() {
+      const boardEl = document.getElementById('board');
+
+      boardEl.addEventListener('pointerdown', event => {
+        const cell = cellFromElement(event.target);
+        if (!cell) return;
+        event.preventDefault();
+        startSelection(cell, event.pointerId);
+      });
+
+      boardEl.addEventListener('pointermove', event => {
+        if (activePointerId !== event.pointerId || !currentSelection) return;
+        const cell = pointerCell(event.clientX, event.clientY);
+        if (!cell) return;
+        event.preventDefault();
+        updateSelection(cell);
+      });
+
+      window.addEventListener('pointerup', event => {
+        if (activePointerId !== event.pointerId) return;
+        const cell = pointerCell(event.clientX, event.clientY);
+        if (cell) updateSelection(cell);
+        finishSelection();
+      });
+
+      window.addEventListener('pointercancel', event => {
+        if (activePointerId !== event.pointerId) return;
+        currentSelection = null;
+        activePointerId = null;
+        renderBoard();
+      });
+    }
+
+    function useHint() {
+      if (!currentDifficulty) return;
+      const config = CONFIGS[currentDifficulty];
+      if (hintsUsed >= config.maxHints) {
+        setMessage(T('noHints'), true);
+        return;
+      }
+      const options = words.filter(entry => !entry.found);
+      if (!options.length) return;
+      const pick = options[randInt(0, options.length - 1)];
+      hintCells = [pick.hintCell];
+      hintsUsed += 1;
+      updateStatusBar();
+      setMessage(T('hintWord')(pick.word), false);
+      renderBoard();
+      setTimeout(() => {
+        hintCells = [];
+        renderBoard();
+      }, 1800);
+    }
+
+    function showWinScreen() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const minutes = Math.floor(elapsed / 60);
+      const seconds = elapsed % 60;
+      saveCompletedStats(currentDifficulty, elapsed, hintsUsed);
+      document.getElementById('winStats').innerHTML = [
+        T('timeText')(minutes, seconds),
+        T('wordsFoundText')(words.length, words.length),
+        T('hintsUsedText')(hintsUsed)
+      ].join('<br>');
+      showScreen('screenWin');
+      launchConfetti();
+    }
+
+    function launchConfetti() {
+      const container = document.createElement('div');
+      container.className = 'confetti-container';
+      document.body.appendChild(container);
+
+      const colors = ['#e53935', '#ff9800', '#4caf50', '#2196f3', '#9c27b0', '#fdd835'];
+
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = randInt(0, 100) + '%';
+        piece.style.background = colors[randInt(0, colors.length - 1)];
+        piece.style.animationDuration = (randInt(20, 40) / 10) + 's';
+        piece.style.animationDelay = (randInt(0, 15) / 10) + 's';
+        piece.style.width = randInt(8, 14) + 'px';
+        piece.style.height = randInt(6, 12) + 'px';
+        piece.style.borderRadius = randInt(0, 1) ? '50%' : '2px';
+        container.appendChild(piece);
+      }
+
+      setTimeout(() => container.remove(), 5000);
+    }
+
+    function restartCurrentGame() {
+      if (!currentDifficulty) return;
+      startGame(currentDifficulty);
+    }
+
+    function goToMenu() {
+      showScreen('screenDifficulty');
+      setMessage('', false);
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = null;
+      currentSelection = null;
+      activePointerId = null;
+    }
+
+    function startGame(difficulty) {
+      currentDifficulty = difficulty;
+      hintsUsed = 0;
+      currentSelection = null;
+      activePointerId = null;
+      hintCells = [];
+      const puzzle = buildPuzzle(CONFIGS[difficulty]);
+      board = puzzle.grid;
+      words = puzzle.placedWords;
+      renderBoard();
+      renderWordList();
+      updateStatusBar();
+      setMessage('', false);
+      showScreen('screenGame');
+      recordGameStart(difficulty);
+      startTime = Date.now();
+      tickTimer();
+      if (timerHandle) clearInterval(timerHandle);
+      timerHandle = setInterval(tickTimer, 1000);
+    }
+
+    function setLang(nextLang) {
+      lang = nextLang;
+      localStorage.setItem('gameLang', lang);
+      document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+      document.getElementById('langToggle').textContent = lang === 'no' ? '🇳🇴' : '🇬🇧';
+      document.getElementById('backLink').href = '../index.html?lang=' + lang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (typeof i18n[lang][key] === 'string') el.textContent = i18n[lang][key];
+      });
+      if (currentDifficulty) updateStatusBar();
+    }
+
+    document.getElementById('langToggle').addEventListener('click', () => {
+      setLang(lang === 'no' ? 'en' : 'no');
+    });
+
+    attachBoardEvents();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('lang') === 'en' || urlParams.get('lang') === 'no') {
+      lang = urlParams.get('lang');
+    } else if (localStorage.getItem('gameLang')) {
+      lang = localStorage.getItem('gameLang');
+    }
+    setLang(lang);
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('../sw.js').catch(() => {});
+    }
+  </script>
+  <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+</body>
+</html>
